@@ -164,8 +164,8 @@ End Property
 ' Methods
 '=========================================================================
 
-Public Sub DownloadFile(URL As String, LocalFileName As Variant)
-    pvInit URL, LocalFileName, STGM_WRITE Or STGM_CREATE, vbNullString
+Public Sub DownloadFile(URL As String, LocalFileName As Variant, Optional IgnoreServerCertificateErrors As Boolean = False)
+     pvInit URL, LocalFileName, STGM_WRITE Or STGM_CREATE, vbNullString, IgnoreServerCertificateErrors
 End Sub
 
 Public Sub UploadFile(URL As String, LocalFileName As Variant, Optional FileFormName As String)
@@ -188,11 +188,13 @@ End Sub
 
 '= private ===============================================================
 
-Private Sub pvInit(URL As String, LocalFileName As Variant, ByVal StreamFlags As Long, FileFormName As String)
+Private Sub pvInit(URL As String, LocalFileName As Variant, ByVal StreamFlags As Long, FileFormName As String, Optional IgnoreServerCertificateErrors As Boolean = False)
     Const FUNC_NAME     As String = "pvInit"
     Dim hResult     As Long
+    Dim TlsLocalFeatures    As UcsTlsLocalFeaturesEnum
     
     On Error GoTo EH
+    TlsLocalFeatures = 0: If IgnoreServerCertificateErrors Then TlsLocalFeatures = ucsTlsIgnoreServerCertificateErrors                                
     If Not pvParseUrl(URL, m_uRemote, "http") Then
         On Error GoTo 0
         Err.Raise vbObjectError, , ERR_INVALID_URL
@@ -237,7 +239,7 @@ Private Sub pvInit(URL As String, LocalFileName As Variant, ByVal StreamFlags As
         Err.Raise vbObjectError, , m_oSocket.GetErrorDescription(m_oSocket.LastError)
     End If
     #If ImplUseTls Then
-    If Not m_oSocket.Connect(m_uRemote.Host, m_uRemote.Port, UseTls:=pvIsProtocolSecure(m_uRemote.Protocol)) Then
+    If Not m_oSocket.Connect(m_uRemote.Host, m_uRemote.Port, pvIsProtocolSecure(m_uRemote.Protocol), TlsLocalFeatures) Then
     #Else
     If Not m_oSocket.Connect(m_uRemote.Host, m_uRemote.Port) Then
     #End If
